@@ -88,7 +88,7 @@ uint8_t AGV::start(){
 	for (int i = 0; i < 4; ++i)
 	{
 		if(m[i].getAdress() != -1){
-			m[i].start();
+			m[i].startDriver();
 			j++;
 		}
 	}
@@ -111,7 +111,7 @@ uint8_t AGV::stop(){
 		if(m[i].getAdress() != -1){
 			m[i].writeVel(0);
 			//Set speeds to 0 also
-			m[i].stop();
+			m[i].stopDriver();
 			
 			j++;
 		}

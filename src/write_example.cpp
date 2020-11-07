@@ -30,7 +30,7 @@ int main(int argc, char const *argv[])
 	agv.openBus(500000);
 	agv.start();
 
-	agv.writeVel(vel_cmd);
+	//agv.writeVel(vel_cmd);
 
 	while(count < 100){
 

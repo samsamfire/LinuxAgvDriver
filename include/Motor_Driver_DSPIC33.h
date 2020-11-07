@@ -17,9 +17,10 @@
 
 #include "can_message.h"
 #include <thread>
+#include <chrono>
 
 
-
+#define TIMEOUT 50 //This is the time before connection is decided to be lost between pc and microcontroller
 
 class Motor
 {
@@ -27,11 +28,7 @@ class Motor
 		Motor(int motor_addess);
 
 
-		/*Methods for reading pic*/
-		void readPos();
-		void readVel();
-		void readPosEncoder();
-		void readVelEncoder();
+
 
 		/*Read certain number of bytes on can bus*/
 		void readCAN();
@@ -45,8 +42,8 @@ class Motor
 		void readPosVel();
 		bool readEncoder(); //Reads from picd
 
-		void start();
-		void stop();
+		bool sendStart();
+		void sendStop();
 
 		void startDriver();
 		void stopDriver();
@@ -58,6 +55,7 @@ class Motor
 		bool setHdl(int s);
 		uint8_t getHdl();
 		int getAdress();
+		bool getConnexionState();
 
 		int16_t readEncoderDirect();
 		
@@ -83,7 +81,9 @@ class Motor
 		uint8_t update_rate_can;//Rate at which info is sent from pic default 50Hz
 		struct can_frame frame;
 		uint8_t nbytes;
+		bool receiving_msgs;
 		int s; //Socket Handle 
+		uint8_t timeout;
 
 		//PID parameters to add
 
