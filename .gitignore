@@ -2,6 +2,6 @@
 
 
 
-/ojb/*
-/bin/*
-/debug/*
+obj/*
+bin/*
+debug/*
