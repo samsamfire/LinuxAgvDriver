@@ -2,15 +2,17 @@
 
 
 
-Motor::Motor(int motor_address){
+Motor::Motor(int motor_address) : mThread{} {
 	//Add constructor stuff
 	this->address = motor_address;
 	//Thread is started when driver is started
-	std::thread can_read(&Motor::readCAN,this);	
+	 //	
+	// can_read.join();
+	mThread = std::thread(&Motor::readCAN,this);
 
 	vel_encoder = 0;
-}
 
+}
 
 
 void Motor::readCAN(){

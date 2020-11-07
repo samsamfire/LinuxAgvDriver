@@ -41,6 +41,7 @@ int main(int argc, char const *argv[])
 
 		agv->readVel();
 		vel_encoder = agv->getVel();
+		printf("This is x[0] speed %f\r\n",vel_encoder[0]);
 		usleep(100000);
 		count++;
 

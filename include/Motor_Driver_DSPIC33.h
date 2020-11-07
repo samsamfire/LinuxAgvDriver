@@ -26,6 +26,7 @@ class Motor
 	public:
 		Motor(int motor_addess);
 
+
 		/*Methods for reading pic*/
 		void readPos();
 		void readVel();
@@ -64,6 +65,8 @@ class Motor
 
 	private:
 
+		std::thread mThread;
+
 		//int16_t twist[3];
 		int16_t velSens;
 		int16_t pos;
@@ -85,7 +88,7 @@ class Motor
 		//PID parameters to add
 
 
-		//std::string name;
+		
 
 };
 
