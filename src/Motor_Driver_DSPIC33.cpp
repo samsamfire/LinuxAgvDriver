@@ -25,7 +25,7 @@ void Motor::readCAN(){
 		nbytes = read(s,&frame,sizeof(frame));
 
 		if(nbytes>=0){
-			id = frame.can_id;
+			id = frame.can_id & 0x7F;
 			switch(id){
 
 				case POS_VEL_TORQUE_SENS_ID :
