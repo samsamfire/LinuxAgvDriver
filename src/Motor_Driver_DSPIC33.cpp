@@ -33,6 +33,8 @@ void Motor::readCAN(){
 					pos_encoder = (frame.data[1] << 8) + frame.data[0];
 					vel_encoder = (frame.data[3] << 8) + frame.data[2];
 					torque_encoder = (frame.data[5] << 8) + frame.data[4];	
+
+					printf("vel %i\n",vel_encoder );
 					break;
 				}
 

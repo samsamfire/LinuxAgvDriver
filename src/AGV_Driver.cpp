@@ -19,7 +19,7 @@ void AGV::readVel(void){
 		if(m[i].getState() == true){
 			//m[i].readEncoder(); //Updates values from encoders
 			w[i] = m[i].getVel();
-			printf("speed %i %s\n", w[i]);
+			printf("speed %i\n", w[i]);
 		}
 
 		else{
