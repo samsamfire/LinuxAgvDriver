@@ -46,6 +46,10 @@ public:
 	AGV(); //fl fr br bl;
 	AGV(int ad_fl, int ad_fr, int ad_br, int ad_bl): 
 	m{Motor(ad_fl),Motor(ad_fr),Motor(ad_br),Motor(ad_bl)}{};
+	~AGV(){
+		this->stop();
+		this->closeBus();
+	}
 
 	void setMode();
 
