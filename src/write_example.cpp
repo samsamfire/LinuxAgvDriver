@@ -20,7 +20,7 @@ int main(int argc, char const *argv[])
 {
 
 	AGV * agv;
-	double vel_cmd[4] ={0};
+	double vel_cmd[4] = {0};
 	vel_cmd[0] = 0.3;
 
 
@@ -36,7 +36,7 @@ int main(int argc, char const *argv[])
 	agv->openBus(500000);
 	agv->start();
 
-	agv->writeVel(vel_cmd);
+	//agv->writeVel(vel_cmd);
 
 	while(1);
 
