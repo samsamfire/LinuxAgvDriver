@@ -1,6 +1,6 @@
 # tool macros
 CC := g++
-CCFLAG := # FILL: compile flags
+CCFLAG := -pthread
 DBGFLAG := -g
 CCOBJFLAG := $(CCFLAG) -c
 

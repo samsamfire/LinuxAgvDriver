@@ -14,7 +14,9 @@
 
 //#include <string>
 
+
 #include "can_message.h"
+#include <thread>
 
 
 
@@ -31,7 +33,7 @@ class Motor
 		void readVelEncoder();
 
 		/*Read certain number of bytes on can bus*/
-		bool readCAN(uint8_t nbytes);
+		void readCAN();
 
 
 
@@ -44,6 +46,9 @@ class Motor
 
 		void start();
 		void stop();
+
+		void startDriver();
+		void stopDriver();
 
 		void writeVel(int16_t vel);
 		void writePos(uint16_t pos);
@@ -83,7 +88,6 @@ class Motor
 		//std::string name;
 
 };
-
 
 
 

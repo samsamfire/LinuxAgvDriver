@@ -18,7 +18,10 @@ int main(int argc, char const *argv[])
 
 	AGV * agv;
 	double vel_cmd[4] = {0};
+	double *vel_encoder;
 	vel_cmd[0] = 0.3;
+
+	int count = 0;
 
 
 	
@@ -34,8 +37,20 @@ int main(int argc, char const *argv[])
 	agv->start();
 
 	agv->writeVel(vel_cmd);
+	while(count < 100){
 
-	usleep(2000000);
+		agv->readVel();
+		vel_encoder = agv->getVel();
+		usleep(100000);
+		count++;
+
+	}
+	
+
+
+
+	agv->stop();
+	agv->closeBus();
 
 	delete agv;
 

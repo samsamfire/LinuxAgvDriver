@@ -17,7 +17,7 @@ void AGV::readVel(void){
 	for (int i = 0; i < 4; ++i)
 	{
 		if(m[i].getState() == true){
-			m[i].readEncoder(); //Updates values from encoders
+			//m[i].readEncoder(); //Updates values from encoders
 			w[i] = m[i].getVel();
 		}
 

@@ -5,8 +5,56 @@
 Motor::Motor(int motor_address){
 	//Add constructor stuff
 	this->address = motor_address;
-	
+	//Thread is started when driver is started
+	std::thread can_read(&Motor::readCAN,this);	
+
+	vel_encoder = 0;
 }
+
+
+
+void Motor::readCAN(){
+
+	uint8_t nbytes = 0;
+
+	int id = 0;
+
+	while(1) {
+		nbytes = read(s,&frame,sizeof(frame));
+
+		if(nbytes>=0){
+			id = frame.can_id;
+			switch(id){
+
+				case POS_VEL_TORQUE_SENS_ID :
+				{
+					pos_encoder = (frame.data[1] << 8) + frame.data[0];
+					vel_encoder = (frame.data[3] << 8) + frame.data[2];
+					torque_encoder = (frame.data[5] << 8) + frame.data[4];	
+					break;
+				}
+
+
+				default:
+				{
+					break;
+				}
+
+
+
+			}
+
+
+
+		}
+
+
+	}
+}
+
+
+
+
 
 int16_t Motor::readEncoderDirect(){
 
@@ -21,16 +69,6 @@ int16_t Motor::readEncoderDirect(){
 
 }
 
-
-bool Motor::readCAN(uint8_t nbyes){
-	//Frame is supposed to contain nbytes, read is non blocking
-	//read returns number of bytes read
-	int nbytes = 0;
-	nbytes = read(s,&frame,sizeof(frame));
-
-
-	return true;
-}
 
 void Motor::readPos(){
 	//Add some filtering to get right motor
