@@ -37,6 +37,7 @@ int main(int argc, char const *argv[])
 	agv->start();
 
 	agv->writeVel(vel_cmd);
+	
 	while(count < 100){
 
 		agv->readVel();

@@ -2,7 +2,7 @@
 
 
 
-Motor::Motor(int motor_address) : mThread{} {
+Motor::Motor(int motor_address) {
 	//Add constructor stuff
 	this->address = motor_address;
 	//Thread is started when driver is started
