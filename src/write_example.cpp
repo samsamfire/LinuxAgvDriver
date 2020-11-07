@@ -8,11 +8,8 @@
 #include <string>
 #include <cstdlib>
 
+#include <unistd.h>
 
-
-void exiting() {
-    std::cout << "Exiting";
-}
 
 
 
@@ -36,9 +33,11 @@ int main(int argc, char const *argv[])
 	agv->openBus(500000);
 	agv->start();
 
-	//agv->writeVel(vel_cmd);
+	agv->writeVel(vel_cmd);
 
-	while(1);
+	usleep(2000000);
+
+	delete agv;
 
 	
 	return 0;
