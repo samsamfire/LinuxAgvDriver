@@ -25,7 +25,7 @@ void Motor::readCAN(){
 
 	int id = 0;
 
-	while(1) {
+	while(connection_state) {
 		nbytes = read(s,&frame,sizeof(frame));
 
 		if(nbytes>=0){
@@ -69,6 +69,7 @@ void Motor::readCAN(){
 void Motor::startDriver(){
 
 	//Thread is started when driver is started
+	connection_state = 1;
 	mThread = std::thread(&Motor::readCAN,this);
 
 	usleep(100000);
@@ -80,7 +81,7 @@ void Motor::startDriver(){
 		else{
 			//ADD
 		}
-		connection_state = 1;
+		
 	}
 	else{
 		mThread.join();
@@ -91,21 +92,23 @@ void Motor::startDriver(){
 
 void Motor::stopDriver(){
 
-	if(mThread.joinable()){
-		mThread.join();
-	}
+	
 	if(timeout == 1){
 		printf("Driver %i timeout \r\n",address );
 	}
 	if(connection_state == 1){
 		sendStop();
+		connection_state= 0;
 		printf("Sending stop to motor %i\r\n", address);
 	}
 	else{
 		printf("Driver stopped but connection_state is 0\r\n");
 	}
+
+	if(mThread.joinable()){
+		mThread.join();
+	}
 	
-	connection_state = 0;
 }
 
 
