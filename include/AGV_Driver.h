@@ -62,6 +62,7 @@ public:
 	uint8_t stop();  //Returns the numbers of motors stopped correctly
 
 	uint8_t* getState();
+	Motor* getMotor(uint8_t nb);
 
 
 	bool openBus(int bitrate);

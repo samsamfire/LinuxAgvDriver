@@ -58,6 +58,8 @@ class Motor
 		bool getConnexionState();
 
 		int16_t readEncoderDirect();
+
+		double getElapsedTime();
 		
 
 
@@ -84,6 +86,8 @@ class Motor
 		bool receiving_msgs;
 		int s; //Socket Handle 
 		uint8_t timeout;
+
+		double elapsed_time_ms;
 
 		//PID parameters to add
 

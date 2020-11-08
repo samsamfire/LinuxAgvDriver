@@ -19,6 +19,7 @@ int main(int argc, char const *argv[])
 
 	double vel_cmd[4] = {0};
 	double *vel_encoder;
+	Motor* motor;
 	vel_cmd[0] = 0.3;
 
 	int count = 0;
@@ -30,6 +31,8 @@ int main(int argc, char const *argv[])
 	agv.openBus(500000);
 	agv.start();
 
+	motor = agv.getMotor(0);
+
 	//agv.writeVel(vel_cmd);
 
 	while(count < 100){
@@ -38,6 +41,7 @@ int main(int argc, char const *argv[])
 		vel_encoder = agv.getVel();
 		printf("This is x[0] speed %f\r\n",vel_encoder[0]);
 		usleep(100000);
+		printf("Elapsed time %lf \r\n", motor->getElapsedTime());
 		count++;
 
 	}

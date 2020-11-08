@@ -219,3 +219,10 @@ double* AGV::getVel(){
 
 
 }
+
+
+Motor* AGV::getMotor(uint8_t nb){
+
+	return &m[nb];
+
+}
