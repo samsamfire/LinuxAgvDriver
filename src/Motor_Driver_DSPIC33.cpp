@@ -54,8 +54,9 @@ void Motor::readCAN(){
 			receiving_msgs = 1;
 
 			if(elapsed_time_ms > TIMEOUT ){
-				stopDriver();
 				timeout = 1;
+				stopDriver();
+				
 			}
 
 
@@ -84,6 +85,7 @@ void Motor::startDriver(){
 		
 	}
 	else{
+		connection_state = 0;
 		mThread.join();
 		printf("No driver has been detected on Bus with address %i \r\n",address);
 	}
@@ -97,17 +99,18 @@ void Motor::stopDriver(){
 		printf("Driver %i timeout \r\n",address );
 	}
 	if(connection_state == 1){
-		sendStop();
 		connection_state= 0;
+		sendStop();
 		printf("Sending stop to motor %i\r\n", address);
 	}
 	else{
-		printf("Driver stopped but connection_state is 0\r\n");
+		printf("Driver already stopped\r\n");
 	}
 
 	if(mThread.joinable()){
 		mThread.join();
 	}
+	usleep(100000);
 	
 }
 
