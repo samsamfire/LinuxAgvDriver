@@ -3,16 +3,16 @@ Agv robot driver for linux, written in c++
 
 
 
-#Requirements :
+# Requirements :
 Tested on raspberry Pi 3b+ running ubuntu 20.04LTS.
 ncurses and libsocketcan need to be installed.
 
 
-#Install:
+# Install:
 Run makefile 
 
 
-#Usage:
+# Usage:
 
 The driver contains several examples:
 -teleop_keyboard : which is a simple teleoperation using arrow keys for movement. Space bar stops the program and the AGV, 0 stops movement.
