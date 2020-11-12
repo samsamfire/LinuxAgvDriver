@@ -13,6 +13,10 @@
 #include <linux/can.h>
 #include <linux/can/raw.h>
 #include <stdint.h>
+#include <libsocketcan.h>
+#include <can_netlink.h>
+#include <atomic>
+#include <thread>
 
 #define Rr 0.045 //Rayon de la roue en m
 #define Z 1 //Rapport de reduction
@@ -38,28 +42,43 @@ Cela suppose que les vitesses sont contenus entre -30m/s et +30m/s(largement le 
 As well as x and y and yaw positions*/
 
 
+struct
+{
+	double* input;
+	double* output;
+	double* setpoint;
+
+	double Kp;
+	double Ki;
+	
+}PID;
+
 
 class AGV
 {
 public:
 
 	AGV(); //fl fr br bl;
-	AGV(int ad_fl, int ad_fr, int ad_br, int ad_bl): m{Motor(ad_fl),Motor(ad_fr),Motor(ad_br),Motor(ad_bl)}{};
-	~AGV(){
-		this->stop();
-		this->closeBus();
-	}
+	AGV(int ad);
+	AGV(int ad_fl, int ad_fr, int ad_br, int ad_bl);
+	
 
 	void setMode();
 
 	void writePos();
-	void writeVel(double vel[3]);
-	void readVel(void);
+	void writeVel(const double vel[4]);
+	bool writeVelSoft(double vel[3],int increment);
 
-	double* getVel(void);
 
-	uint8_t start(); //Returns the number of motors started correctly.
-	uint8_t stop();  //Returns the numbers of motors stopped correctly
+	bool readVel(void);
+	void setVel(double vel[4]);
+	void setVelXYZ(double vel[3]);
+
+	bool getVelEncoder(double vel[4]);
+	void getVelCmd(double vel[3]);
+
+	bool start(); //True if all motors started successfully.
+	bool stop();  //Trure if all motors stopped successfully.
 
 	uint8_t* getState();
 	Motor* getMotor(uint8_t nb);
@@ -69,6 +88,17 @@ public:
 	bool closeBus();
 
 
+	void startConstraintController();
+	void constraintController();
+	void stopConstraintController();
+
+	bool setVelSoft(double vel[3],int increment);
+	void getVelEncoderAngular(double vel_angular[4]);
+
+
+
+
+
 
 
 private:
@@ -76,17 +106,20 @@ private:
 
 	Motor m[4];
 
+	double vel_angular_sens[4];
+
 	double vel[4],pos[3];
+
 	double vel_sens[4],pos_sens[3];
 
 	//CAN bus info
+	bool constraint_controller;
+	bool stop_constraint;
 
-	int ret[4];
-    int s[4], nbytes[4];
-    struct sockaddr_can addr[4];
-    struct ifreq ifr[4];
-    struct can_frame frame;
-    struct can_filter rfilter[4];
+	//PID constraintPID;
+	double iterm;
+
+	std::thread pidThread;
 
 
 

@@ -6,11 +6,14 @@
 #include <string.h>
 #include <unistd.h>
 #include <net/if.h>
+#include <sys/fcntl.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <linux/can.h>
 #include <linux/can/raw.h>
 #include <stdint.h>
+#include <sys/time.h>
+#include <sys/types.h>
 
 //#include <string>
 
@@ -19,16 +22,16 @@
 #include <thread>
 #include <chrono>
 
+#include <atomic>
 
-#define TIMEOUT 50 //This is the time before connection is decided to be lost between pc and microcontroller
+
+#define TIMEOUT 500000 //This is the time before connection is decided to be lost between pc and microcontroller in us
 
 class Motor
 {
 	public:
-		Motor(int motor_addess);
-
-
-
+		Motor(int motor_address);
+		
 
 		/*Read certain number of bytes on can bus*/
 		void readCAN();
@@ -40,26 +43,30 @@ class Motor
 		int16_t getTorque();
 
 		void readPosVel();
-		bool readEncoder(); //Reads from picd
 
 		bool sendStart();
-		void sendStop();
+		bool sendStop();
 
-		void startDriver();
-		void stopDriver();
+		bool startDriver();
+		bool restartDriver();
+		bool stopDriver();
 
-		void writeVel(int16_t vel);
+		bool writeVel(int16_t vel);
 		void writePos(uint16_t pos);
 		bool getState();
 
 		bool setHdl(int s);
 		uint8_t getHdl();
 		int getAdress();
-		bool getConnexionState();
-
-		int16_t readEncoderDirect();
+		bool getConnectionState();
+		int getNbReceived();
 
 		double getElapsedTime();
+
+		bool createSocket();
+		bool closeSocket();
+
+		void endThread();
 		
 
 
@@ -77,19 +84,36 @@ class Motor
 		int16_t torque_encoder;
 
 		bool error; //1 for yes 0 for no
-		uint8_t connection_state;
+
+		
+		
+		bool connection_state;
+
 		int address;
 		//CAN variables
 		uint8_t update_rate_can;//Rate at which info is sent from pic default 50Hz
-		struct can_frame frame;
-		uint8_t nbytes;
 		bool receiving_msgs;
-		int s; //Socket Handle 
 		uint8_t timeout;
 
 		double elapsed_time_ms;
 
 		//PID parameters to add
+
+
+
+
+		//CAN bus info
+
+		bool socket_state; 
+		int ret;
+	    int s,nbytes;
+	    struct sockaddr_can addr;
+	    struct ifreq ifr;
+	    struct can_frame frame;
+	    struct can_filter rfilter;
+	    int nbMessagesReceived;
+	    fd_set rfds;
+	    struct timeval tv;
 
 
 		

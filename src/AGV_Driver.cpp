@@ -1,38 +1,58 @@
 #include "../include/AGV_Driver.h"
+#include "libsocketcan.h"
+
+
+AGV::AGV(int ad_fl, int ad_fr, int ad_br, int ad_bl): m{Motor(ad_fl),Motor(ad_fr),Motor(ad_br),Motor(ad_bl)}{
+
+	// int* state;
+	//  can_get_state("can0",state);
+	//  if(*state == CAN_STATE_BUS_OFF or *state== CAN_STATE_STOPPED){
+	//  	//can_do_restart("can0");
+	//   	openBus(500000);
+	//  }
+	
+	
+	
+ }
 
 
 
-//Maybe create a twits message to interface with ROS ?
 
 
 
 /*This function reads velocity info from encoder of all 4 drivers and computes 
 actual dx, dy, dyaw via inverse kinematics*/
 
-void AGV::readVel(void){
+bool AGV::getVelEncoder(double vel_sens[4]){
 
 	int16_t w[4] = {0};
 
 	
 	for (int i = 0; i < 4; ++i)
 	{
-		if(m[i].getState() == true){
-			//m[i].readEncoder(); //Updates values from encoders
+		if(m[i].getConnectionState() == true){
 			w[i] = m[i].getVel();
+			vel_angular_sens[i] = (double) w[i]/F;
+
 		}
 
 		else{
-			//printf("Motor is %i is not on\r\n",i);
+			//Try to reconnect ..
+			//m[i].restartDriver();
+			return false;
 		}
 		
 	}
+
 	//Let's compute dx,dy,dyaw
 	
-	 vel_sens[0] = (Rr/4)*(-w[1]+w[0]+w[3]-w[2])/F;
-	 vel_sens[1] = (Rr/4)*(-w[1]-w[0]+w[3]+w[2])/F;
-	 vel_sens[2] = (Rr/4)*(1/(La+Lb))*(-w[1]-w[0]-w[2]-w[3])/F;
+	 vel_sens[0] = (double)(Rr/4)*(-w[1]+w[0]+w[3]-w[2])/F;
+	 vel_sens[1] = (double)(Rr/4)*(-w[1]-w[0]+w[3]+w[2])/F;
+	 vel_sens[2] = (double)(Rr/4)*(1/(La+Lb))*(-w[1]-w[0]-w[2]-w[3])/F;
 	// //This term corresponds to kinematic constraints
-	 vel_sens[3] = (-w[1]+w[0]-w[3]+w[2])/F;
+	 vel_sens[3] = (double)(-w[1]+w[0]-w[3]+w[2])/F;
+
+	 return true;
 }
 
 
@@ -40,7 +60,7 @@ void AGV::readVel(void){
 
 
 
-void AGV::writeVel( double vel[4] ){
+void AGV::writeVel( const double vel[4] ){
 	
 	//Cinematic model:
 	this->vel[0] = vel[0];
@@ -66,33 +86,163 @@ void AGV::writeVel( double vel[4] ){
 	m_v[2] = (1/Rr)*(-Vx+Vy-(La+Lb)*Vz+e)*F*Z;
 	m_v[3] = (1/Rr)*(Vx+Vy-(La+Lb)*Vz-e)*F*Z;
 
+	//If constraint_controller not active send speeds else, constraint controller does it
+	
 	for (int i = 0; i < 4; ++i)
 	{
 		//Check if motor is activated
-		if(m[i].getState() == 1){
+		if(m[i].getConnectionState() == 1){
 			m[i].writeVel(m_v[i]);
 		}
 		else{
+
+			//Try to reconnect
 		}
 		
 	}
+}
+
+/*Blocking function that sends a desired speed to AGV whilst limit the acceleration
+by interpolating the desired speed*/
+
+
+bool AGV::setVelSoft(double vel[3],int increment){
+
+	double speed_difference_inc[3];
+	double speed_cmd[3];
+	int n = 0;
+	double actual_speed[4];
+	if(getVelEncoder(actual_speed)){
+
+		//Don't interfer with kinematic constraint
+		for (int i = 0; i < 3; ++i)
+		{
+			speed_difference_inc[i] = (vel[i]-actual_speed[i])/increment;
+			speed_cmd[i] = actual_speed[i];
+		}
+
+
+		while(n<increment){
+			n++;
+			//Not write but only set
+			setVelXYZ(speed_cmd);
+			for (int i = 0; i < 3; ++i)
+			{
+				speed_cmd[i]+=speed_difference_inc[i];
+			}
+			usleep(10000);
+
+
+		}
+		return true;
+
+
+	}
+
+	return false;
+
 
 }
+
+
+bool AGV::writeVelSoft(double vel[3],int increment){
+
+	double speed_difference_inc[3];
+	double speed_cmd[4];
+
+	int n = 0;
+	double actual_speed[4];
+	if(getVelEncoder(actual_speed)){
+
+		//Don't interfer with kinematic constraint
+		for (int i = 0; i < 3; ++i)
+		{
+			speed_difference_inc[i] = (vel[i]-actual_speed[i])/increment;
+			speed_cmd[i] = actual_speed[i];
+		}
+
+		speed_cmd[3] = 0;
+		while(n<increment){
+			n++;
+			//write vel, blocking
+			writeVel(speed_cmd);
+			for (int i = 0; i < 3; ++i)
+			{
+				speed_cmd[i]+=speed_difference_inc[i];
+			}
+			usleep(10000);
+
+
+		}
+		return true;
+
+
+	}
+
+	return false;
+
+
+}
+
+
+
+
+
+
+void AGV::setVel(double vel[4]){
+
+	this->vel[0] = vel[0];
+	this->vel[1] = vel[1];
+	this->vel[2] = vel[2];
+	this->vel[3] = vel[3];
+
+}
+
+/*This sets desired velocity in X Y and theta without writing to agv
+Write vel must be called in order to */
+void AGV::setVelXYZ(double vel[3]){
+
+	this->vel[0] = vel[0];
+	this->vel[1] = vel[1];
+	this->vel[2] = vel[2];
+}
+
+
 
 /*Start each motor of the agv*/
 /*Bus needs to be opened before calling this function*/
 
-uint8_t AGV::start(){
-	uint8_t j=0;
+bool AGV::start(){
+	int j = 0;
 	for (int i = 0; i < 4; ++i)
 	{
 		if(m[i].getAdress() != -1){
-			m[i].startDriver();
-			j++;
+			if (m[i].startDriver() == false)
+			{
+				j++;		
+			}
+
+			else{
+
+				m[i].writeVel(0);
+			}
+			
+			
 		}
 	}
 
-	return j;
+	if(j==0){
+
+		printf("Started Successfully AGV\r\n");
+		return true;
+	}
+
+	
+	else{
+		printf("One or more drivers not started\r\n");
+		return false;
+	}
+
 
 }
 
@@ -101,22 +251,33 @@ uint8_t AGV::start(){
 /*Bus needs to be opened before calling this function*/
 
 
-uint8_t AGV::stop(){
+bool AGV::stop(){
 
-	uint8_t j=0;
+	int j=0;
 
 	for (int i = 0; i < 4; ++i)
 	{
 		if(m[i].getAdress() != -1){
-			m[i].writeVel(0);
-			//Set speeds to 0 also
-			m[i].stopDriver();
-			
-			j++;
-		}
-	}
-	return j;
+			if(m[i].writeVel(0)==true and m[i].stopDriver() == true ){
 
+			}
+			else{
+				j++;
+			}
+		}
+		
+	}
+
+	if(j == 0){
+
+		printf("Successfully stopped all drivers\r\n");
+		return true;
+	}
+	else{
+
+		printf("One or more drivers not stopped\r\n");
+		return false;
+	}
 	
 
 }
@@ -130,7 +291,7 @@ bool AGV::openBus(int bitrate){
     -Add a dummy read or write to check if connexion is working 
     -Check the address of all connected devices*/
 
-    //Code from waveshare demo https://www.waveshare.com/wiki/RS485_CAN_HAT
+    
 
 	char buff[100];
 	
@@ -141,51 +302,6 @@ bool AGV::openBus(int bitrate){
 
     printf("Initialized can at bitrate %i \r\n",bitrate);
 
-    
-    for (int i = 0; i < 4; ++i)
-    {
-    	//1.Create socket 
-    	s[i] = socket(PF_CAN, SOCK_RAW, CAN_RAW);
-
-    	if (s[i] < 0) {
-	        perror("socket PF_CAN failed");
-	        return 1;
-    	}
-
-    	//2.Set socket to non-blocking
-
-    	fcntl(s[i], F_SETFL, O_NONBLOCK);
-
-    	//3.Specify can0 device
-	    strcpy(ifr[i].ifr_name, "can0");
-	    ret[i] = ioctl(s[i], SIOCGIFINDEX, &ifr[i]);
-	    if (ret[i] < 0) {
-	        perror("ioctl failed");
-        	return 1;
-        }
-
-
-        //4.Bind the socket to can0
-	    addr[i].can_family = AF_CAN;
-	    addr[i].can_ifindex = ifr[i].ifr_ifindex;
-	    ret[i] = bind(s[i], (struct sockaddr *)&addr[i], sizeof(addr[0]));
-	    if (ret[i] < 0) {
-	        perror("bind failed");
-	        return 1;
-	    }
-
-	    //5.Define receive rules
-	    rfilter[i].can_id = (m[i].getAdress() << 7); //Ids beggining with correct address
-    	rfilter[i].can_mask = (15 << 7);//All lower bits are don't cares
-    	printf("Added filter to motor address : %i \r\n",m[i].getAdress()<<7);
-    	setsockopt(s[i], SOL_CAN_RAW, CAN_RAW_FILTER, &rfilter[i], sizeof(rfilter[0]));
-	
-
-		//6.Give to motors socket handle
-
-		m[i].setHdl(s[i]);
-
-	}
 
     return 0;
 }
@@ -194,11 +310,6 @@ bool AGV::openBus(int bitrate){
 
 bool AGV::closeBus(){
 
-	//Shutdown can and socket
-	for (int i = 0; i < 4; ++i)
-	{
-		close(s[i]);
-	}
 	
 	system("sudo ifconfig can0 down");
 
@@ -212,17 +323,81 @@ bool AGV::closeBus(){
 
 
 
+Motor* AGV::getMotor(uint8_t nb){
 
-double* AGV::getVel(){
+	return &m[nb];
 
-	return vel_sens;
+}
 
+void AGV::startConstraintController(){
+
+	stop_constraint =0;
+	constraint_controller = 1;
+	iterm = 0;
+	pidThread = std::thread(&AGV::constraintController,this);
 
 }
 
 
-Motor* AGV::getMotor(uint8_t nb){
+void AGV::constraintController(){
 
-	return &m[nb];
+	double e;
+	double dt = 10000; //10ms
+	double vel_encoder[4];
+	double vel_cmd[4];
+	double vel_zero[4]={0};
+	//Started constraint controller
+	while(stop_constraint ==0){
+
+		if(getVelEncoder(vel_encoder)== true){
+
+			for (int i = 0; i < 4; ++i)
+			{
+				vel_cmd[i] = vel[i];
+			}
+			iterm = iterm - 1.5*vel_encoder[3]*0.01;
+			//printf("Iterm value : %lf \r\n",iterm);
+			vel_cmd[3] = iterm;
+			writeVel(vel_cmd);
+		}
+
+		else{
+			//writeVel(vel_zero);
+		}
+		
+		
+		
+		usleep(dt);
+
+	}
+	
+}
+
+void AGV::stopConstraintController(){
+
+	stop_constraint = 1;
+	if(pidThread.joinable()){
+		pidThread.join();
+	}
+}
+
+
+
+void AGV::getVelEncoderAngular(double vel_angular[4]){
+
+	for (int i = 0; i < 4; ++i)
+	{
+		vel_angular[i] = vel_angular_sens[i];
+	}
+
+}
+
+
+void AGV::getVelCmd(double vel[3]){
+
+	vel[0] = this->vel[0];
+	vel[1] = this->vel[1];
+	vel[2] = this->vel[2];
+
 
 }
