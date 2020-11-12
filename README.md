@@ -14,9 +14,9 @@ Run makefile
 
 # Usage:
 
-The driver contains several examples:
--teleop_keyboard : which is a simple teleoperation using arrow keys for movement. Space bar stops the program and the AGV, 0 stops movement.
--write_example : for send simple forward command.
--pid_controller : implementation of pid controller for better control of the AGV 
+The driver contains several examples:  
+-teleop_keyboard : which is a simple teleoperation using arrow keys for movement. Space bar stops the program and the AGV, 0 stops movement.  
+-write_example : for send simple forward command.  
+-pid_controller : implementation of pid controller for better control of the AGV  
 
 
