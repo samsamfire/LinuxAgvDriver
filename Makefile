@@ -2,7 +2,7 @@
 CC := g++
 CCFLAG := -pthread 
 DBGFLAG := -g
-LDLIBS := -lncurses -lsocketcan -L./lib/MPU6050 -lMPU6050
+LDLIBS := -lncurses -lsocketcan  -lmpu6050 -li2c
 CCOBJFLAG := $(CCFLAG) -c 
 
 
@@ -50,7 +50,7 @@ $(BIN_PATH)/tele_keyboard: $(OBJ_PATH)/tele_keyboard.o $(LIB_PATH)/libagv.a
 $(BIN_PATH)/write_example: $(OBJ_PATH)/write_example.o $(LIB_PATH)/libagv.a
 	$(CC) $(CCFLAG) -o $@ $(OBJ_PATH)/write_example.o -L./lib -lagv $(LDLIBS)
 
-$(BIN_PATH)/pid_controller: $(OBJ_PATH)/pid_controller.o $(LIB_PATH)/libagv.a
+$(BIN_PATH)/pid_controller: $(OBJ_PATH)/pid_controller.o $(LIB_PATH)/libagv.a $(LIB_PATH)/libmpu6050.a
 	$(CC) $(CCFLAG) -o $@ $(OBJ_PATH)/pid_controller.o -L./lib -lagv $(LDLIBS)
 
 $(BIN_PATH)/write_value: $(OBJ_PATH)/write_value.o $(LIB_PATH)/libagv.a
@@ -67,6 +67,9 @@ $(OBJ_PATH)/%.o: $(SRC_PATH)/%.c*
 
 
 $(LIB_PATH)/libagv.a: $(OBJ_PATH)/AGV_Driver.o $(OBJ_PATH)/Motor_Driver_DSPIC33.o
+	ar rcs $@ $^
+
+$(LIB_PATH)/libmpu6050.a: $(OBJ_PATH)/MPU6050.o
 	ar rcs $@ $^
 
 
