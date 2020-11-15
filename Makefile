@@ -2,7 +2,7 @@
 CC := g++
 CCFLAG := -pthread 
 DBGFLAG := -g
-LDLIBS := -lncurses -lsocketcan
+LDLIBS := -lncurses -lsocketcan -L./lib/MPU6050 -lMPU6050
 CCOBJFLAG := $(CCFLAG) -c 
 
 
@@ -18,7 +18,7 @@ DBG_PATH := debug
 LIB_PATH := lib
 
 
-TARGETS := tele_keyboard write_example
+TARGETS := tele_keyboard write_example pid_controller write_value
 TARGETS_BIN := $(addprefix $(BIN_PATH)/,$(TARGETS))
 
 # src files & obj files
@@ -50,6 +50,11 @@ $(BIN_PATH)/tele_keyboard: $(OBJ_PATH)/tele_keyboard.o $(LIB_PATH)/libagv.a
 $(BIN_PATH)/write_example: $(OBJ_PATH)/write_example.o $(LIB_PATH)/libagv.a
 	$(CC) $(CCFLAG) -o $@ $(OBJ_PATH)/write_example.o -L./lib -lagv $(LDLIBS)
 
+$(BIN_PATH)/pid_controller: $(OBJ_PATH)/pid_controller.o $(LIB_PATH)/libagv.a
+	$(CC) $(CCFLAG) -o $@ $(OBJ_PATH)/pid_controller.o -L./lib -lagv $(LDLIBS)
+
+$(BIN_PATH)/write_value: $(OBJ_PATH)/write_value.o $(LIB_PATH)/libagv.a
+	$(CC) $(CCFLAG) -o $@ $(OBJ_PATH)/write_value.o -L./lib -lagv $(LDLIBS)
 
 
 

@@ -87,6 +87,13 @@ void monitor_keyboard(AGV* agv){
 			        	keyboard_monitor = false;
 			        	break;
 
+			        default:
+
+			        {
+			        	printf("%i\n",c );
+			        	break;
+			        }
+
 
 
 			}

@@ -224,7 +224,7 @@ bool AGV::start(){
 
 			else{
 
-				m[i].writeVel(0);
+				//m[i].writeVel(0);
 			}
 			
 			
