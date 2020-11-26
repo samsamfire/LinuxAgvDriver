@@ -85,6 +85,7 @@ void monitor_keyboard(AGV* agv){
 			        	agv->stop();
 			        	printf("Stopped from monitor \r\n");
 			        	keyboard_monitor = false;
+			        	state_controller_state =false;
 			        	break;
 
 			        case 111:
@@ -130,8 +131,11 @@ void state_controller(AGV* agv){
 	double vel_ctrl[3] = {0};
 	double vel_cmd[3] = {0};
 	double pos_ctrl[4];
+	double prev_pos_ctrl[4];
 	double vel_inverse_m[4];
 	double vel_encoder[4];
+
+	double rate_limit = 0.03;
 
 	float yaw,pitch,roll;
 
@@ -147,14 +151,15 @@ void state_controller(AGV* agv){
 	
 	float theta = 0;
 
-	double itermx =0, itermy =0, itermtheta = 0;
-	double dtermx=0, dtermy =0, dtermtheta = 0;
-	double errorx = 0, errory = 0, errortheta = 0;
-	double prev_errorx = 0, prev_errory = 0, prev_errortheta =0;
+	double itermx =0, itermy =0, itermtheta = 0, itermdtheta = 0;
+	double dtermx=0, dtermy =0, dtermtheta = 0 , dtermdtheta = 0;
+	double errorx = 0, errory = 0, errortheta = 0, errordtheta = 0;
+	double prev_errorx = 0, prev_errory = 0, prev_errortheta =0, prev_errordtheta = 0;
 
-	double Kpx =10, Kdx = 0.1, Kix = 0.01;
-	double Kpy =10, Kdy = 0.1, Kiy = 0.01;
+	double Kpx =10, Kdx = 0.01, Kix = 0.01;
+	double Kpy =10, Kdy = 0.01, Kiy = 0.01;
 	double Kpz =5, Kdz = 0.01, Kiz = 0.01;
+	double Kpdtheta = 2, Kddtheta = 0.001, Kidtheta = 0.01;
 
 	double antiwindup = 0.3;
 
@@ -213,38 +218,65 @@ void state_controller(AGV* agv){
 
 		errortheta = (double) pos_cmd[2]-theta;
 
+		errordtheta = (double) 0 - vthetaw;
+
+
 		
 
 		dtermx = (double) Kdx*(errorx-prev_errorx)/dt;
-		dtermx = (double) Kdy*(errory-prev_errory)/dt;
-		dtermx = (double) Kdz*(errortheta-prev_errortheta)/dt;
+		dtermy = (double) Kdy*(errory-prev_errory)/dt;
+		//dtermtheta = (double) Kdz*(errortheta-prev_errortheta)/dt;
+		dtermdtheta = (double)  Kddtheta*(errordtheta - prev_errordtheta)/dt;
 
 		itermx += (double) Kix*errorx*dt;
 		itermy += (double) Kiy*errory*dt;
-		itermtheta += (double) Kiz*errortheta*dt;
+		//itermtheta += (double) Kiz*errortheta*dt;
+		itermdtheta += (double) Kidtheta*errordtheta*dt;
 
 		itermx = limit(itermx,0.25,-0.25);
 		itermy = limit(itermy,0.25,-0.25);
-		itermtheta = limit(itermtheta,0.6,-0.6);
+		//itermtheta = limit(itermtheta,0.6,-0.6);
+		itermdtheta = limit(dtermdtheta,0.25,-0.25);
 
 
 		pos_ctrl[0] =(double) Kpx*(pos_cmd[0]-pxw) + itermx + dtermx;
-		pos_ctrl[1] = (double) Kpy*(pos_cmd[1]-pyw) + itermy;
-		pos_ctrl[2] = (double) Kpz*(pos_cmd[2] - theta) + itermtheta;
+		pos_ctrl[1] = (double) Kpy*(pos_cmd[1]-pyw) + itermy + dtermy;
+		//pos_ctrl[2] = (double) Kpz*(pos_cmd[2] - theta) + itermtheta;
 
 		pos_ctrl[0] = limit(pos_ctrl[0],0.3,-0.3);
 		pos_ctrl[1] = limit(pos_ctrl[1],0.3,-0.3);
-		pos_ctrl[2] = limit(pos_ctrl[2],0.6,-0.6);
-		pos_ctrl[3] = limit(iterm,0.3,-0.3);
+		//pos_ctrl[2] = limit(pos_ctrl[2],0.6,-0.6);
+		//pos_ctrl[3] = limit(iterm,0.3,-0.3);
 
 		//pos_ctrl[0] = 0;
 		//pos_ctrl[1] = 0;
 		//pos_ctrl[2] = 0;
-		//pos_ctrl[3] = 0;
+		pos_ctrl[3] = 0;
 
 		
 
-		//limit ouputs
+		//Rate limiting 
+
+		for (int i = 0; i < 4; ++i)
+		{
+			if (abs(prev_pos_ctrl[i]-pos_ctrl[i])>rate_limit)
+			{
+				if(pos_ctrl[i]>prev_pos_ctrl[i]){
+					pos_ctrl[i] = prev_pos_ctrl[i] + rate_limit;
+					printf("pos_ctrl[0] %lf, prev_pos_ctrl[0] %lf \r\n", pos_ctrl[0], prev_pos_ctrl[0]);
+				}
+				else if(pos_ctrl[i]<prev_pos_ctrl[i]){
+					pos_ctrl[i] = prev_pos_ctrl[i] - rate_limit;
+					printf("pos_ctrl[0] %lf, prev_pos_ctrl[0] %lf \r\n", pos_ctrl[0], prev_pos_ctrl[0]);
+				}
+
+				
+			}
+		}
+
+		pos_ctrl[2] = (double) Kpdtheta*errordtheta + itermdtheta + dtermdtheta;
+		//printf("errordtheta %lf \r\n",pos_ctrl[2] );
+		pos_ctrl[2] = limit(pos_ctrl[2],0.6,-0.6);
 
 
 
@@ -257,58 +289,39 @@ void state_controller(AGV* agv){
 		// printf("Vel encoder 1: %lf, Vel encoder 2: %lf, Vel encoder 3: %lf, Vel encoder 4: %lf \r\n", vel_encoder[0],vel_encoder[1],vel_encoder[2],vel_encoder[3]);
 		
 
-		
-		// if(pos_ctrl[0]>0 and pos_ctrl[0]<0.1){
-
-		// 	pos_ctrl[0] = 0;
-		// }
-		// else if(pos_ctrl[0]<0 and pos_ctrl[0]>-0.1){
-
-		// 	pos_ctrl[0] = 0;
-		// }
-	
-
-		//pos_ctrl[3] = 0;
-
 		if(abs(errorx)< 0.01){
 			pos_ctrl[0] = 0;
 			itermx = 0;
-		}
-		else{
-
-			errorx = (double) pos_cmd[0]-pxw;
-
 		}
 
 		if(abs(errory)< 0.01){
 			pos_ctrl[1] = 0;
 			itermy =0;
 		}
-		else{
 
-			errory = (double) pos_cmd[1]-pyw;
+		// if(abs(errortheta)< 0.01){
+		// 	pos_ctrl[2] = 0;
+		// 	itermtheta = 0;
+		// }
 
-		}
-
-		if(abs(errortheta)< 0.01){
-			pos_ctrl[2] = 0;
-			itermtheta = 0;
-		}
-		else{
-
-			errortheta = (double) pos_cmd[2]-theta;
-
-		}
-
-		//printf(" Vel mpu %f, Pos mpu %f \r\n",vthetaw,theta );
+		 if(abs(errordtheta)< 0.05){
+		 	pos_ctrl[2] = 0;
+		 	itermtheta = 0;
+		 }
 
 		agv->writeVel(pos_ctrl);
 
 		usleep(usleep_time);
 
+		for (int i = 0; i < 4; ++i)
+		{
+			prev_pos_ctrl[i] = pos_ctrl[i];
+		}
+
 		prev_errorx = errorx;
 		prev_errory = errory;
 		prev_errortheta =errortheta;
+		prev_errordtheta = errordtheta;
 
 
 	}
@@ -346,7 +359,7 @@ int main(int argc, char const *argv[])
 	if(agv.start()){
 
 			agv.writeVel(vel_start);
-			while(1){
+			while(state_controller_state){
 
 				agv.setVelXYZ(pos_cmd);
 

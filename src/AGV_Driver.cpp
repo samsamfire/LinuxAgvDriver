@@ -17,48 +17,7 @@ AGV::AGV(int ad_fl, int ad_fr, int ad_br, int ad_bl): m{Motor(ad_fl),Motor(ad_fr
 
 
 
-
-
-
-/*This function reads velocity info from encoder of all 4 drivers and computes 
-actual dx, dy, dyaw via inverse kinematics*/
-
-bool AGV::getVelEncoder(double vel_sens[4]){
-
-	int16_t w[4] = {0};
-
-	
-	for (int i = 0; i < 4; ++i)
-	{
-		if(m[i].getConnectionState() == true){
-			w[i] = m[i].getVel();
-			vel_angular_sens[i] = (double) w[i]/F;
-
-		}
-
-		else{
-			//Try to reconnect ..
-			//m[i].restartDriver();
-			return false;
-		}
-		
-	}
-
-	//Let's compute dx,dy,dyaw
-	
-	 vel_sens[0] = (double)(Rr/4)*(-w[1]+w[0]+w[3]-w[2])/F;
-	 vel_sens[1] = (double)(Rr/4)*(-w[1]-w[0]+w[3]+w[2])/F;
-	 vel_sens[2] = (double)(Rr/4)*(1/(La+Lb))*(-w[1]-w[0]-w[2]-w[3])/F;
-	// //This term corresponds to kinematic constraints
-	 vel_sens[3] = (double)(-w[1]+w[0]-w[3]+w[2])/F;
-
-	 return true;
-}
-
-
-
-
-
+/*Send desired velocities in world frame with an array*/
 
 void AGV::writeVel( const double vel[4] ){
 	
@@ -73,18 +32,16 @@ void AGV::writeVel( const double vel[4] ){
 	double Vz = vel[2];
 	double e = vel[3];
 
-	int16_t m_v[4];
-
 	//https://www.fh-dortmund.de/roehrig/papers/roehrigCCTA17.pdf
 
 	
 
 	//0 and 3 are same direction and 1 and 2 same opposite direction to 0 & 3
 	//Vx and Vy working, not tested Vz
-	m_v[0] = (1/Rr)*(Vx-Vy-(La+Lb)*Vz+e)*F*Z;
-	m_v[1] = (1/Rr)*(-Vx-Vy-(La+Lb)*Vz-e)*F*Z; 
-	m_v[2] = (1/Rr)*(-Vx+Vy-(La+Lb)*Vz+e)*F*Z;
-	m_v[3] = (1/Rr)*(Vx+Vy-(La+Lb)*Vz-e)*F*Z;
+	wm_cmd.w[0] = (1/Rr)*(Vx-Vy-(La+Lb)*Vz+e)*F*Z;
+	wm_cmd.w[1] = (1/Rr)*(-Vx-Vy-(La+Lb)*Vz-e)*F*Z; 
+	wm_cmd.w[2] = (1/Rr)*(-Vx+Vy-(La+Lb)*Vz+e)*F*Z;
+	wm_cmd.w[3] = (1/Rr)*(Vx+Vy-(La+Lb)*Vz-e)*F*Z;
 
 	//If constraint_controller not active send speeds else, constraint controller does it
 	
@@ -92,7 +49,7 @@ void AGV::writeVel( const double vel[4] ){
 	{
 		//Check if motor is activated
 		if(m[i].getConnectionState() == 1){
-			m[i].writeVel(m_v[i]);
+			m[i].writeVel(wm_cmd.w[i]);
 		}
 		else{
 
@@ -102,7 +59,84 @@ void AGV::writeVel( const double vel[4] ){
 	}
 }
 
-/*Blocking function that sends a desired speed to AGV whilst limit the acceleration
+
+/*Send desired velocities in world frame for each axis*/
+
+void AGV::writeVel(const double vx,const double vy, const double vtheta, const double e){
+
+
+	vel[0] = vx;
+	vel[1] = vy;
+	vel[2] = vtheta;
+	vel[3] = e;
+
+	wm_cmd.w[0] = (1/Rr)*(vx-vy-(La+Lb)*vtheta+e)*F*Z;
+	wm_cmd.w[1] = (1/Rr)*(-vx-vy-(La+Lb)*vtheta-e)*F*Z; 
+	wm_cmd.w[2] = (1/Rr)*(-vx+vy-(La+Lb)*vtheta+e)*F*Z;
+	wm_cmd.w[3] = (1/Rr)*(vx+vy-(La+Lb)*vtheta-e)*F*Z;
+
+	for (int i = 0; i < 4; ++i)
+	{
+		//Check if motor is activated
+		if(m[i].getConnectionState() == 1){
+			m[i].writeVel(wm_cmd.w[i]);
+		}
+		else{
+
+			//Try to reconnect
+		}
+		
+	}
+
+
+}
+
+/*Blocking function to write an interpolated speed to driver */
+/*This function will send send speed in timesteps  of 10ms with the given increment*/
+bool AGV::writeVelSoft(double vel[3],int increment){
+
+	double speed_difference_inc[3];
+	double speed_cmd[4];
+
+	int n = 0;
+	double actual_speed[4];
+	if(getVelEncoder(actual_speed)){
+
+		//Don't interfer with kinematic constraint
+		for (int i = 0; i < 3; ++i)
+		{
+			speed_difference_inc[i] = (vel[i]-actual_speed[i])/increment;
+			speed_cmd[i] = actual_speed[i];
+		}
+
+		speed_cmd[3] = 0;
+		while(n<increment){
+			n++;
+			//write vel, blocking
+			writeVel(speed_cmd);
+			for (int i = 0; i < 3; ++i)
+			{
+				speed_cmd[i]+=speed_difference_inc[i];
+			}
+			usleep(10000);
+
+
+		}
+		return true;
+
+
+	}
+
+	return false;
+
+}
+
+
+
+
+
+
+/*Blocking function that sets a desired speed to AGV whilst limiting the acceleration
 by interpolating the desired speed*/
 
 
@@ -145,44 +179,6 @@ bool AGV::setVelSoft(double vel[3],int increment){
 }
 
 
-bool AGV::writeVelSoft(double vel[3],int increment){
-
-	double speed_difference_inc[3];
-	double speed_cmd[4];
-
-	int n = 0;
-	double actual_speed[4];
-	if(getVelEncoder(actual_speed)){
-
-		//Don't interfer with kinematic constraint
-		for (int i = 0; i < 3; ++i)
-		{
-			speed_difference_inc[i] = (vel[i]-actual_speed[i])/increment;
-			speed_cmd[i] = actual_speed[i];
-		}
-
-		speed_cmd[3] = 0;
-		while(n<increment){
-			n++;
-			//write vel, blocking
-			writeVel(speed_cmd);
-			for (int i = 0; i < 3; ++i)
-			{
-				speed_cmd[i]+=speed_difference_inc[i];
-			}
-			usleep(10000);
-
-
-		}
-		return true;
-
-
-	}
-
-	return false;
-
-
-}
 
 
 
@@ -306,6 +302,7 @@ bool AGV::openBus(int bitrate){
     return 0;
 }
 
+
 /*Close CAN bus*/
 
 bool AGV::closeBus(){
@@ -400,4 +397,37 @@ void AGV::getVelCmd(double vel[3]){
 	vel[2] = this->vel[2];
 
 
+}
+
+/*This function reads velocity info from encoder of all 4 drivers and computes 
+actual dx, dy, dyaw via inverse kinematics*/
+
+bool AGV::getVelEncoder(double vel_sens[4]){
+
+	
+	for (int i = 0; i < 4; ++i)
+	{
+		if(m[i].getConnectionState() == true){
+			wm_sens.w[i] = m[i].getVel();
+			vel_angular_sens[i] = (double) wm_sens.w[i]/F;
+
+		}
+
+		else{
+			//Try to reconnect ..
+			//m[i].restartDriver();
+			return false;
+		}
+		
+	}
+
+	//Let's compute dx,dy,dyaw
+	
+	 vel_sens[0] = (double)(Rr/4)*(-wm_sens.w[1]+wm_sens.w[0]+wm_sens.w[3]-wm_sens.w[2])/F;
+	 vel_sens[1] = (double)(Rr/4)*(-wm_sens.w[1]-wm_sens.w[0]+wm_sens.w[3]+wm_sens.w[2])/F;
+	 vel_sens[2] = (double)(Rr/4)*(1/(La+Lb))*(-wm_sens.w[1]-wm_sens.w[0]-wm_sens.w[2]-wm_sens.w[3])/F;
+	// //This term corresponds to kinematic constraints
+	 vel_sens[3] = (double)(-wm_sens.w[1]+wm_sens.w[0]-wm_sens.w[3]+wm_sens.w[2])/F;
+
+	 return true;
 }

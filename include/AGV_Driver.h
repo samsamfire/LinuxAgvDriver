@@ -54,6 +54,15 @@ struct
 }PID;
 
 
+
+typedef struct{
+
+	int16_t w[4];
+
+
+}W_MOTOR;
+
+
 class AGV
 {
 public:
@@ -67,6 +76,10 @@ public:
 
 	void writePos();
 	void writeVel(const double vel[4]);
+	void writeVel(const double vx, const double vy, const double vtheta, const double constraint);
+
+
+
 	bool writeVelSoft(double vel[3],int increment);
 
 
@@ -105,7 +118,9 @@ private:
 	//Declare the 4 motor drivers
 
 	Motor m[4];
+	W_MOTOR wm_cmd, wm_sens;
 
+	
 	double vel_angular_sens[4];
 
 	double vel[4],pos[3];
@@ -120,10 +135,6 @@ private:
 	double iterm;
 
 	std::thread pidThread;
-
-
-
-
 
 	
 };
